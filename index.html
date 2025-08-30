@@ -315,10 +315,10 @@
                 const data = await response.json();
                 console.log('Variants response:', data);
                 
-                if (response.ok && data.results && data.results.length > 0) {
+                if (response.ok && data && data.length > 0) {
                     const selectElement = document.getElementById('variant-select');
                     selectElement.innerHTML = '';
-                    data.results.forEach(variant => {
+                    data.forEach(variant => {
                         const option = document.createElement('option');
                         option.value = variant.variantId;
                         option.textContent = variant.variantValue;
