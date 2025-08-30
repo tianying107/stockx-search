@@ -76,6 +76,38 @@
                     </button>
                 </div>
             </div>
+            <button id="proceed-to-step-4-button" class="bg-gray-400 text-white font-medium py-2 px-4 rounded-xl shadow-lg mt-4 hover:bg-gray-500 transition duration-300 transform hover:scale-105">
+                Proceed to Step 4
+            </button>
+        </div>
+
+        <!-- Step 4: Get Highest Bid -->
+        <div id="product-search-section" class="hidden mt-8 bg-gray-50 p-6 rounded-2xl shadow-inner">
+            <h2 class="text-xl font-semibold text-gray-700 mb-4">Step 4: Get Product Highest Bid</h2>
+            <p class="text-sm text-gray-500 mb-4">
+                Enter a product description to search for an item, then select a variant to see its highest bid.
+            </p>
+            <div class="mb-4">
+                <label for="product-query" class="block text-gray-700 font-medium text-left mb-1">Product Description:</label>
+                <input type="text" id="product-query" class="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="e.g., Yeezy Boost 350 V2 Beluga">
+            </div>
+            <button id="search-button" class="bg-indigo-600 text-white font-medium py-2 px-4 rounded-xl shadow-lg hover:bg-indigo-700 transition duration-300 transform hover:scale-105">
+                Search Product
+            </button>
+            
+            <div id="variant-section" class="hidden mt-6 text-left">
+                <label for="variant-select" class="block text-gray-700 font-medium mb-1">Select a Variant:</label>
+                <select id="variant-select" class="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4"></select>
+                <button id="get-bid-button" class="bg-blue-600 text-white font-medium py-2 px-4 rounded-xl shadow-lg hover:bg-blue-700 transition duration-300 transform hover:scale-105">
+                    Get Highest Bid
+                </button>
+            </div>
+
+            <div id="bid-result-display" class="hidden mt-6 text-left p-4 bg-white rounded-lg border border-gray-200">
+                <h3 class="text-lg font-bold text-gray-700 mb-2">Highest Bid</h3>
+                <p id="highest-bid-text" class="text-3xl font-bold text-green-600"></p>
+                <p id="bid-info" class="text-sm text-gray-500 mt-2"></p>
+            </div>
         </div>
 
         <!-- Status & Message -->
@@ -86,11 +118,13 @@
         const CLIENT_ID = 'bIQrwMpNVs2dj2N5QmCx1TUJm8GdgnzL';
         const REDIRECT_URI = window.location.origin + window.location.pathname;
         const CLIENT_SECRET = '5pCGn0XR2xCa4K6shFZqW1M0n6peSSi5ztMzpL20_pK7AMXghNjUcaMvQegW0rZv';
+        let currentProductId = null;
 
         const statusMessage = document.getElementById('status-message');
         const stepOne = document.getElementById('step-one');
         const stepTwo = document.getElementById('step-two');
         const stepThree = document.getElementById('step-three');
+        const productSearchSection = document.getElementById('product-search-section');
 
         document.getElementById('auth-button').addEventListener('click', () => {
             const authUrl = `https://accounts.stockx.com/authorize?` +
@@ -116,6 +150,11 @@
         document.getElementById('use-code-button').addEventListener('click', () => {
             stepThree.classList.remove('hidden');
             statusMessage.textContent = 'Authorization code ready. Click "Get Access Token" to proceed.';
+        });
+        
+        document.getElementById('proceed-to-step-4-button').addEventListener('click', () => {
+            productSearchSection.classList.remove('hidden');
+            statusMessage.textContent = 'You can now search for products to get their bids.';
         });
 
         document.getElementById('copy-access-token-button').addEventListener('click', () => {
@@ -148,6 +187,9 @@
             }
         });
         
+        document.getElementById('search-button').addEventListener('click', searchProduct);
+        document.getElementById('get-bid-button').addEventListener('click', getHighestBid);
+
         async function exchangeCodeForToken(authCode) {
             statusMessage.textContent = 'Exchanging code for token...';
             try {
@@ -172,13 +214,16 @@
                     
                     if (data.refresh_token) {
                          document.getElementById('refresh-token-display').value = data.refresh_token;
-                         statusMessage.textContent = 'Successfully received tokens!';
+                         statusMessage.textContent = 'Successfully received tokens! You can now proceed to Step 4.';
                     } else {
                          document.getElementById('refresh-token-display').value = 'Token not found.';
-                         statusMessage.textContent = 'Successfully received access token, but refresh token was not provided by the API. This is common for public clients.';
+                         statusMessage.textContent = 'Successfully received access token, but refresh token was not provided by the API. This is common for public clients. You can now proceed to Step 4.';
                     }
                     
                     document.getElementById('token-display').classList.remove('hidden');
+                    document.getElementById('proceed-to-step-4-button').classList.remove('bg-gray-400');
+                    document.getElementById('proceed-to-step-4-button').classList.add('bg-indigo-600');
+                    document.getElementById('proceed-to-step-4-button').classList.remove('cursor-not-allowed');
                 } else {
                     statusMessage.textContent = `Error: ${data.error_description || data.error}`;
                 }
@@ -211,10 +256,10 @@
                     // The API should return a new refresh token. Update it for security.
                     if (data.refresh_token) {
                         document.getElementById('refresh-token-display').value = data.refresh_token;
-                        statusMessage.textContent = 'Successfully refreshed tokens!';
+                        statusMessage.textContent = 'Successfully refreshed tokens! You can now proceed to Step 4.';
                     } else {
                         document.getElementById('refresh-token-display').value = 'Token not found.';
-                        statusMessage.textContent = 'Successfully received a new access token, but a new refresh token was not provided. The old one may still be valid.';
+                        statusMessage.textContent = 'Successfully received a new access token, but a new refresh token was not provided. The old one may still be valid. You can now proceed to Step 4.';
                     }
                 } else {
                     statusMessage.textContent = `Error: ${data.error_description || data.error}`;
@@ -222,6 +267,128 @@
             } catch (error) {
                 statusMessage.textContent = `An error occurred: ${error.message}`;
                 console.error('Error refreshing token:', error);
+            }
+        }
+        
+        async function searchProduct() {
+            const accessToken = document.getElementById('access-token-display').value;
+            const query = document.getElementById('product-query').value;
+
+            if (!accessToken || accessToken === 'Token not found.') {
+                statusMessage.textContent = 'Please get an access token first to perform a search.';
+                return;
+            }
+
+            if (!query) {
+                statusMessage.textContent = 'Please enter a product description to search.';
+                return;
+            }
+
+            statusMessage.textContent = 'Searching for product...';
+            try {
+                const url = `https://api.stockx.com/v2/catalog/search?query=${encodeURIComponent(query)}`;
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'X-Api-Key': '7V66r8L67X',
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const data = await response.json();
+                console.log('Search response:', data);
+
+                if (response.ok && data.results && data.results.length > 0) {
+                    currentProductId = data.results[0].uuid;
+                    getVariants(accessToken, currentProductId);
+                } else {
+                    statusMessage.textContent = 'No products found for that query.';
+                    document.getElementById('variant-section').classList.add('hidden');
+                    document.getElementById('bid-result-display').classList.add('hidden');
+                }
+            } catch (error) {
+                statusMessage.textContent = `An error occurred during search: ${error.message}`;
+                console.error('Search error:', error);
+            }
+        }
+
+        async function getVariants(accessToken, productId) {
+            statusMessage.textContent = 'Retrieving product variants...';
+            try {
+                const url = `https://api.stockx.com/v2/catalog/products/${productId}/variants`;
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'X-Api-Key': '7V66r8L67X',
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const data = await response.json();
+                console.log('Variants response:', data);
+                
+                if (response.ok && data.results && data.results.length > 0) {
+                    const selectElement = document.getElementById('variant-select');
+                    selectElement.innerHTML = '';
+                    data.results.forEach(variant => {
+                        const option = document.createElement('option');
+                        option.value = variant.uuid;
+                        option.textContent = variant.size;
+                        selectElement.appendChild(option);
+                    });
+                    document.getElementById('variant-section').classList.remove('hidden');
+                    statusMessage.textContent = 'Variants loaded. Please select one.';
+                } else {
+                    statusMessage.textContent = 'No variants found for this product.';
+                    document.getElementById('variant-section').classList.add('hidden');
+                }
+            } catch (error) {
+                statusMessage.textContent = `An error occurred while getting variants: ${error.message}`;
+                console.error('Variants error:', error);
+            }
+        }
+
+        async function getHighestBid() {
+            const accessToken = document.getElementById('access-token-display').value;
+            const selectElement = document.getElementById('variant-select');
+            const variantId = selectElement.value;
+
+            if (!accessToken || accessToken === 'Token not found.') {
+                statusMessage.textContent = 'Please get an access token first.';
+                return;
+            }
+
+            if (!variantId) {
+                statusMessage.textContent = 'Please select a product variant first.';
+                return;
+            }
+
+            statusMessage.textContent = 'Getting highest bid...';
+            try {
+                const url = `https://api.stockx.com/v2/catalog/products/${currentProductId}/variants/${variantId}/market-data`;
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'X-Api-Key': '7V66r8L67X',
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const data = await response.json();
+                console.log('Market data response:', data);
+
+                if (response.ok && data.results && data.results.market && data.results.market.highest_bid) {
+                    document.getElementById('highest-bid-text').textContent = `$${data.results.market.highest_bid}`;
+                    document.getElementById('bid-info').textContent = `Currency: ${data.results.market.currency}`;
+                    document.getElementById('bid-result-display').classList.remove('hidden');
+                    statusMessage.textContent = 'Highest bid retrieved successfully!';
+                } else {
+                    document.getElementById('bid-result-display').classList.add('hidden');
+                    statusMessage.textContent = 'Highest bid data not found for this variant.';
+                }
+            } catch (error) {
+                statusMessage.textContent = `An error occurred while getting the highest bid: ${error.message}`;
+                console.error('Bid error:', error);
             }
         }
 
