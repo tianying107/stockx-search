@@ -159,7 +159,6 @@
                     body: new URLSearchParams({
                         grant_type: 'authorization_code',
                         client_id: CLIENT_ID,
-                        client_secret: CLIENT_SECRET,
                         redirect_uri: REDIRECT_URI,
                         code: authCode
                     })
@@ -176,7 +175,7 @@
                          statusMessage.textContent = 'Successfully received tokens!';
                     } else {
                          document.getElementById('refresh-token-display').value = 'Token not found.';
-                         statusMessage.textContent = 'Successfully received access token, but refresh token was not provided by the API. Please ensure your application is configured with the "offline_access" scope.';
+                         statusMessage.textContent = 'Successfully received access token, but refresh token was not provided by the API. This is common for public clients.';
                     }
                     
                     document.getElementById('token-display').classList.remove('hidden');
@@ -200,7 +199,6 @@
                     body: new URLSearchParams({
                         grant_type: 'refresh_token',
                         client_id: CLIENT_ID,
-                        client_secret: CLIENT_SECRET,
                         refresh_token: refreshToken
                     })
                 });
