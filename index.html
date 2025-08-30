@@ -152,6 +152,10 @@
                     </div>
                 </div>
                 
+                <button id="calculate-profit-button" class="hidden bg-purple-600 text-white font-medium py-2 px-4 rounded-xl shadow-lg mt-4 hover:bg-purple-700 transition duration-300 transform hover:scale-105">
+                    Calculate Profit
+                </button>
+
                 <button id="back-to-search-button" class="hidden bg-gray-400 text-white font-medium py-2 px-4 rounded-xl shadow-lg mt-4 hover:bg-gray-500 transition duration-300">
                     Back to Search
                 </button>
@@ -172,6 +176,7 @@
         const HASHED_PASSWORD = '86cb35a822329fe1de40eb82a1791be1f66f8bd327446686bdd859a89e436853';
 
         let currentProductId = null;
+        let allBidsData = [];
 
         const statusMessage = document.getElementById('status-message');
         const stepOne = document.getElementById('step-one');
@@ -248,8 +253,10 @@
             document.getElementById('product-list-section').classList.remove('hidden');
             document.getElementById('variants-table-section').classList.add('hidden');
             document.getElementById('back-to-search-button').classList.add('hidden');
+            document.getElementById('calculate-profit-button').classList.add('hidden');
             statusMessage.textContent = 'Select a new product to view its bids.';
         });
+        document.getElementById('calculate-profit-button').addEventListener('click', calculateProfit);
 
         async function exchangeCodeForToken(authCode) {
             statusMessage.textContent = 'Exchanging code for token...';
@@ -362,14 +369,12 @@
         }
 
         async function fetchAndDisplayAllBids(accessToken, productId) {
-            statusMessage.textContent = 'Retrieving and analyzing bids for all variants...';
+            statusMessage.textContent = 'Retrieving bids for all variants...';
             document.getElementById('variants-table-section').classList.add('hidden');
             document.getElementById('back-to-search-button').classList.add('hidden');
+            document.getElementById('calculate-profit-button').classList.add('hidden');
             document.getElementById('product-list-section').classList.add('hidden');
-
-            const taxRate = parseFloat(document.getElementById('tax-rate-input').value) / 100;
-            const discountRate = parseFloat(document.getElementById('discount-rate-input').value) / 100;
-            const originalPrice = parseFloat(document.getElementById('original-price-input').value);
+            allBidsData = [];
 
             try {
                 const variantsUrl = `${CORS_PROXY}https://api.stockx.com/v2/catalog/products/${productId}/variants`;
@@ -422,40 +427,21 @@
                       });
                 });
 
-                const allBids = (await Promise.all(marketDataPromises)).filter(bid => bid !== null);
-                allBids.sort((a, b) => b.highestBid - a.highestBid);
+                allBidsData = (await Promise.all(marketDataPromises)).filter(bid => bid !== null);
+                allBidsData.sort((a, b) => b.highestBid - a.highestBid);
 
                 const tableBody = document.getElementById('bids-table-body');
                 tableBody.innerHTML = '';
                 
-                if (allBids.length === 0) {
+                if (allBidsData.length === 0) {
                     statusMessage.textContent = 'No highest bids found for any variant of this product.';
-                    document.getElementById('product-list-section').classList.remove('hidden');
+                    document.getElementById('back-to-search-button').classList.remove('hidden');
                     return;
                 }
 
-                // Process bids with financial calculations
-                const processedBids = allBids.map(bid => {
-                    const highestBid = parseFloat(bid.highestBid);
-                    const earned = Math.min(highestBid * 0.89, highestBid - 5) - 4;
-                    const cost = originalPrice * (1 - discountRate) * (1 + taxRate);
-                    const makeProfileFlag = earned > cost;
-                    return {
-                        ...bid,
-                        earned: earned,
-                        cost: cost,
-                        makeProfileFlag: makeProfileFlag
-                    };
-                });
-
-
-                processedBids.forEach((bid, index) => {
+                allBidsData.forEach((bid, index) => {
                     const row = document.createElement('tr');
-                    const isHighest = index === 0;
                     row.classList.add('hover:bg-gray-50');
-                    if (isHighest) {
-                        row.classList.add('bg-green-100', 'font-semibold', 'text-green-800');
-                    }
 
                     const variantCell = document.createElement('td');
                     variantCell.classList.add('px-6', 'py-4', 'whitespace-nowrap');
@@ -464,19 +450,18 @@
                     const highestBidCell = document.createElement('td');
                     highestBidCell.classList.add('px-6', 'py-4', 'whitespace-nowrap');
                     highestBidCell.textContent = `$${bid.highestBid} ${bid.currency}`;
-
-                    const earnedCell = document.createElement('td');
-                    earnedCell.classList.add('px-6', 'py-4', 'whitespace-nowrap');
-                    earnedCell.textContent = `$${bid.earned.toFixed(2)}`;
                     
+                    const earnedCell = document.createElement('td');
+                    earnedCell.classList.add('px-6', 'py-4', 'whitespace-nowrap', 'text-gray-500');
+                    earnedCell.textContent = '-';
+
                     const costCell = document.createElement('td');
-                    costCell.classList.add('px-6', 'py-4', 'whitespace-nowrap');
-                    costCell.textContent = `$${bid.cost.toFixed(2)}`;
+                    costCell.classList.add('px-6', 'py-4', 'whitespace-nowrap', 'text-gray-500');
+                    costCell.textContent = '-';
 
                     const profileFlagCell = document.createElement('td');
-                    profileFlagCell.classList.add('px-6', 'py-4', 'whitespace-nowrap', 'text-center');
-                    profileFlagCell.textContent = bid.makeProfileFlag ? '✔' : '✖';
-                    profileFlagCell.classList.add(bid.makeProfileFlag ? 'text-green-600' : 'text-red-600', 'font-bold', 'text-lg');
+                    profileFlagCell.classList.add('px-6', 'py-4', 'whitespace-nowrap', 'text-center', 'text-gray-500');
+                    profileFlagCell.textContent = '-';
 
                     row.appendChild(variantCell);
                     row.appendChild(highestBidCell);
@@ -487,12 +472,78 @@
                 });
 
                 document.getElementById('variants-table-section').classList.remove('hidden');
+                document.getElementById('calculate-profit-button').classList.remove('hidden');
                 document.getElementById('back-to-search-button').classList.remove('hidden');
-                statusMessage.textContent = 'Highest bids for all variants retrieved and displayed.';
+                statusMessage.textContent = 'Highest bids retrieved. Now, click "Calculate Profit" to see your potential earnings.';
             } catch (error) {
                 statusMessage.textContent = `An error occurred while getting bids: ${error.message}`;
                 console.error('Error fetching bids:', error);
             }
+        }
+
+        function calculateProfit() {
+            if (allBidsData.length === 0) {
+                statusMessage.textContent = 'No bids to calculate. Please search for a product first.';
+                return;
+            }
+
+            const taxRate = parseFloat(document.getElementById('tax-rate-input').value) / 100;
+            const discountRate = parseFloat(document.getElementById('discount-rate-input').value) / 100;
+            const originalPrice = parseFloat(document.getElementById('original-price-input').value);
+            
+            const processedBids = allBidsData.map(bid => {
+                const highestBid = parseFloat(bid.highestBid);
+                const earned = Math.min(highestBid * 0.89, highestBid - 5) - 4;
+                const cost = originalPrice * (1 - discountRate) * (1 + taxRate);
+                const makeProfileFlag = earned > cost;
+                return {
+                    ...bid,
+                    earned: earned,
+                    cost: cost,
+                    makeProfileFlag: makeProfileFlag
+                };
+            });
+
+            const tableBody = document.getElementById('bids-table-body');
+            tableBody.innerHTML = '';
+
+            processedBids.forEach((bid, index) => {
+                const row = document.createElement('tr');
+                const isHighest = index === 0;
+                row.classList.add('hover:bg-gray-50');
+                if (isHighest) {
+                    row.classList.add('bg-green-100', 'font-semibold', 'text-green-800');
+                }
+
+                const variantCell = document.createElement('td');
+                variantCell.classList.add('px-6', 'py-4', 'whitespace-nowrap');
+                variantCell.textContent = bid.variantName;
+
+                const highestBidCell = document.createElement('td');
+                highestBidCell.classList.add('px-6', 'py-4', 'whitespace-nowrap');
+                highestBidCell.textContent = `$${bid.highestBid} ${bid.currency}`;
+
+                const earnedCell = document.createElement('td');
+                earnedCell.classList.add('px-6', 'py-4', 'whitespace-nowrap');
+                earnedCell.textContent = `$${bid.earned.toFixed(2)}`;
+                
+                const costCell = document.createElement('td');
+                costCell.classList.add('px-6', 'py-4', 'whitespace-nowrap');
+                costCell.textContent = `$${bid.cost.toFixed(2)}`;
+
+                const profileFlagCell = document.createElement('td');
+                profileFlagCell.classList.add('px-6', 'py-4', 'whitespace-nowrap', 'text-center');
+                profileFlagCell.textContent = bid.makeProfileFlag ? '✔' : '✖';
+                profileFlagCell.classList.add(bid.makeProfileFlag ? 'text-green-600' : 'text-red-600', 'font-bold', 'text-lg');
+
+                row.appendChild(variantCell);
+                row.appendChild(highestBidCell);
+                row.appendChild(earnedCell);
+                row.appendChild(costCell);
+                row.appendChild(profileFlagCell);
+                tableBody.appendChild(row);
+            });
+            statusMessage.textContent = 'Profitability calculated and displayed.';
         }
         
         function resetUI() {
