@@ -71,11 +71,11 @@
             </button>
         </div>
 
-        <!-- Step 4: Get Highest Bid -->
+        <!-- Step 4: Product Search and Selection -->
         <div id="product-search-section" class="hidden mt-8 bg-gray-50 p-6 rounded-2xl shadow-inner">
-            <h2 class="text-xl font-semibold text-gray-700 mb-4">Step 4: Get Product Highest Bid</h2>
+            <h2 class="text-xl font-semibold text-gray-700 mb-4">Step 4: Find Product and Get Bid</h2>
             <p class="text-sm text-gray-500 mb-4">
-                Enter a product description to search for an item, then select a variant to see its highest bid.
+                Enter a product description to search for an item.
             </p>
             <div class="mb-4">
                 <label for="product-query" class="block text-gray-700 font-medium text-left mb-1">Product Description:</label>
@@ -84,7 +84,17 @@
             <button id="search-button" class="bg-indigo-600 text-white font-medium py-2 px-4 rounded-xl shadow-lg hover:bg-indigo-700 transition duration-300 transform hover:scale-105">
                 Search Product
             </button>
+
+            <!-- Product Selection Section -->
+            <div id="product-list-section" class="hidden mt-6 text-left">
+                <label for="product-select" class="block text-gray-700 font-medium mb-1">Select a Product:</label>
+                <select id="product-select" class="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4"></select>
+                <button id="select-product-button" class="bg-green-600 text-white font-medium py-2 px-4 rounded-xl shadow-lg hover:bg-green-700 transition duration-300">
+                    Select Product
+                </button>
+            </div>
             
+            <!-- Variant Selection Section -->
             <div id="variant-section" class="hidden mt-6 text-left">
                 <label for="variant-select" class="block text-gray-700 font-medium mb-1">Select a Variant:</label>
                 <select id="variant-select" class="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4"></select>
@@ -166,6 +176,11 @@
         });
         
         document.getElementById('search-button').addEventListener('click', searchProduct);
+        document.getElementById('select-product-button').addEventListener('click', () => {
+            const selectedProductUUID = document.getElementById('product-select').value;
+            currentProductId = selectedProductUUID;
+            getVariants(document.getElementById('access-token-display').value, currentProductId);
+        });
         document.getElementById('get-bid-button').addEventListener('click', getHighestBid);
 
         async function exchangeCodeForToken(authCode) {
@@ -248,10 +263,21 @@
                 console.log('Search response:', data);
 
                 if (response.ok && data.results && data.results.length > 0) {
-                    currentProductId = data.results[0].uuid;
-                    getVariants(accessToken, currentProductId);
+                    const productSelect = document.getElementById('product-select');
+                    productSelect.innerHTML = '';
+                    data.results.forEach(product => {
+                        const option = document.createElement('option');
+                        option.value = product.uuid;
+                        option.textContent = `${product.shoe} - ${product.style_id}`;
+                        productSelect.appendChild(option);
+                    });
+                    document.getElementById('product-list-section').classList.remove('hidden');
+                    document.getElementById('variant-section').classList.add('hidden');
+                    document.getElementById('bid-result-display').classList.add('hidden');
+                    statusMessage.textContent = 'Products found. Please select one to continue.';
                 } else {
                     statusMessage.textContent = 'No products found for that query.';
+                    document.getElementById('product-list-section').classList.add('hidden');
                     document.getElementById('variant-section').classList.add('hidden');
                     document.getElementById('bid-result-display').classList.add('hidden');
                 }
