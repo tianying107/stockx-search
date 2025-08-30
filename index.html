@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StockX Auth Code Retriever</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+
+    <div id="auth-container" class="bg-white p-8 rounded-2xl shadow-xl max-w-lg w-full text-center">
+        <h1 class="text-3xl font-bold text-gray-800 mb-4">StockX Authorization Code Retriever</h1>
+        <p class="text-gray-600 mb-6">
+            Follow the steps below to get your authorization code. This tool does not store your credentials.
+        </p>
+
+        <!-- Display the correct Redirect URI for the user to copy -->
+        <div class="mb-6 bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-xl">
+            <h3 class="text-lg font-bold text-yellow-700 mb-2">Important: One-Time Setup</h3>
+            <p class="text-sm text-yellow-600 mb-2">
+                Copy the URL below and add it to the "Redirect URIs" in your StockX Developer Portal.
+            </p>
+            <div class="bg-yellow-100 p-3 rounded-lg border border-yellow-300 break-all font-mono text-sm text-yellow-800">
+                <span id="display-uri"></span>
+            </div>
+        </div>
+        
+        <!-- Step 1: Link to StockX -->
+        <div id="step-one" class="mb-6">
+            <h2 class="text-xl font-semibold text-gray-700 mb-2">Step 1: Log in and Authorize</h2>
+            <p class="text-sm text-gray-500 mb-4">
+                Click the button below to be redirected to the StockX login page. After you log in and authorize the application, you will be redirected back to this page with the authorization code.
+            </p>
+            <button id="auth-button" class="bg-indigo-600 text-white font-medium py-3 px-6 rounded-xl shadow-lg hover:bg-indigo-700 transition duration-300 transform hover:scale-105">
+                Authorize with StockX
+            </button>
+        </div>
+
+        <!-- Step 2: Display Authorization Code -->
+        <div id="step-two" class="hidden">
+            <h2 class="text-xl font-semibold text-gray-700 mb-2">Step 2: Your Authorization Code</h2>
+            <p class="text-sm text-gray-500 mb-4">
+                Copy the code below. You can now use it in your Python script to get an access token.
+            </p>
+            <textarea id="code-display" readonly class="w-full h-24 p-3 font-mono text-sm bg-gray-50 rounded-lg border border-gray-300 resize-none overflow-auto shadow-inner"></textarea>
+            <button id="copy-button" class="bg-green-500 text-white font-medium py-2 px-4 rounded-xl shadow-lg mt-4 hover:bg-green-600 transition duration-300">
+                Copy Code
+            </button>
+            <p id="copy-message" class="text-xs text-green-600 mt-2 opacity-0 transition-opacity duration-300">Copied!</p>
+        </div>
+
+        <!-- Error/Initial State -->
+        <div id="status-message" class="text-sm text-gray-400 mt-6">Waiting for authorization code...</div>
+    </div>
+
+    <script>
+        const CLIENT_ID = 'HUJrxGjwjLgVaVJRvg29mMKxm4flKW9B'; 
+        const REDIRECT_URI = window.location.origin + window.location.pathname; 
+        const API_KEY = 'Zi3jWkYRWx1wIQ8VEaOXh4piarIpjwXj3utuH7Ct'; 
+        const CLIENT_SECRET = 'HJ4hS8XxFDyJQfTLBYEvRebzEGaQ2rZRbg_aVDnPEoHuVhZVrgx4PR_mtfHDeAay'; 
+
+        document.getElementById('display-uri').textContent = REDIRECT_URI;
+
+        document.getElementById('auth-button').addEventListener('click', () => {
+            const authUrl = `https://accounts.stockx.com/authorize?` +
+                            `response_type=code&` +
+                            `client_id=${CLIENT_ID}&` +
+                            `redirect_uri=${REDIRECT_URI}&` +
+                            `scope=offline_access%20openid&` +
+                            `audience=gateway.stockx.com`;
+            window.location.href = authUrl;
+        });
+
+        document.getElementById('copy-button').addEventListener('click', () => {
+            const codeDisplay = document.getElementById('code-display');
+            codeDisplay.select();
+            document.execCommand('copy');
+
+            const message = document.getElementById('copy-message');
+            message.classList.add('opacity-100');
+            setTimeout(() => {
+                message.classList.remove('opacity-100');
+            }, 2000);
+        });
+
+        window.onload = function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const authCode = urlParams.get('code');
+            const statusMessage = document.getElementById('status-message');
+            const stepOne = document.getElementById('step-one');
+            const stepTwo = document.getElementById('step-two');
+            const codeDisplay = document.getElementById('code-display');
+
+            if (authCode) {
+                stepOne.classList.add('hidden');
+                stepTwo.classList.remove('hidden');
+                codeDisplay.value = authCode;
+                statusMessage.textContent = 'Authorization code received!';
+            } else if (window.location.search) {
+                 // Handles errors or other parameters
+                statusMessage.textContent = 'Something went wrong. Please try again.';
+            } else {
+                statusMessage.textContent = 'Click the button to begin.';
+            }
+        };
+    </script>
