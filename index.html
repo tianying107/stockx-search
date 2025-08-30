@@ -15,6 +15,7 @@
 </head>
 <body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
 
+    <!-- Validation Page -->
     <div id="validation-page" class="bg-white p-8 rounded-2xl shadow-xl max-w-sm w-full text-center">
         <h1 class="text-3xl font-bold text-gray-800 mb-4">Access Restricted</h1>
         <p class="text-gray-600 mb-6">
@@ -29,6 +30,7 @@
         <p id="validation-message" class="text-xs text-red-500 mt-2 hidden">Invalid password. Please try again.</p>
     </div>
 
+    <!-- Main Application -->
     <div id="main-app" class="hidden">
         <div id="auth-container" class="bg-white p-8 rounded-2xl shadow-xl max-w-lg w-full text-center">
             <h1 class="text-3xl font-bold text-gray-800 mb-4">StockX Authorization Code Retriever</h1>
@@ -36,6 +38,7 @@
                 Follow the steps below to get your authorization code and then your access token. This tool does not store your credentials.
             </p>
             
+            <!-- Step 1: Link to StockX -->
             <div id="step-one" class="mb-6">
                 <h2 class="text-xl font-semibold text-gray-700 mb-2">Step 1: Log in and Authorize</h2>
                 <p class="text-sm text-gray-500 mb-4">
@@ -46,6 +49,7 @@
                 </button>
             </div>
 
+            <!-- Step 2: Display Authorization Code -->
             <div id="step-two" class="hidden mb-6">
                 <h2 class="text-xl font-semibold text-gray-700 mb-2">Step 2: Your Authorization Code</h2>
                 <p class="text-sm text-gray-500 mb-4">
@@ -61,6 +65,7 @@
                 <p id="copy-code-message" class="text-xs text-green-600 mt-2 opacity-0 transition-opacity duration-300">Copied!</p>
             </div>
 
+            <!-- Step 3: Get Access Token -->
             <div id="step-three" class="hidden mb-6">
                 <h2 class="text-xl font-semibold text-gray-700 mb-2">Step 3: Get Access Token</h2>
                 <p class="text-sm text-gray-500 mb-4">
@@ -83,6 +88,7 @@
                 </button>
             </div>
 
+            <!-- Step 4: Product Search and Selection -->
             <div id="product-search-section" class="hidden mt-8 bg-gray-50 p-6 rounded-2xl shadow-inner">
                 <h2 class="text-xl font-semibold text-gray-700 mb-4">Step 4: Find Product and Get Bid</h2>
                 <p class="text-sm text-gray-500 mb-4">
@@ -96,6 +102,7 @@
                     Search Product
                 </button>
 
+                <!-- Product Selection Section -->
                 <div id="product-list-section" class="hidden mt-6 text-left">
                     <label for="product-select" class="block text-gray-700 font-medium mb-1">Select a Product:</label>
                     <select id="product-select" class="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4"></select>
@@ -104,6 +111,7 @@
                     </button>
                 </div>
                 
+                <!-- Variants Table Section -->
                 <div id="variants-table-section" class="hidden mt-6 text-left">
                     <h3 class="text-lg font-bold text-gray-700 mb-2">Highest Bids by Variant</h3>
                     <div class="overflow-x-auto rounded-lg shadow">
@@ -115,7 +123,8 @@
                                 </tr>
                             </thead>
                             <tbody id="bids-table-body" class="bg-white divide-y divide-gray-200">
-                                </tbody>
+                                <!-- Bids will be populated here -->
+                            </tbody>
                         </table>
                     </div>
                 </div>
@@ -126,6 +135,7 @@
 
             </div>
 
+            <!-- Status & Message -->
             <div id="status-message" class="text-sm text-gray-400 mt-6"></div>
         </div>
     </div>
@@ -136,9 +146,7 @@
         const CLIENT_SECRET = '5pCGn0XR2xCa4K6shFZqW1M0n6peSSi5ztMzpL20_pK7AMXghNjUcaMvQegW0rZv';
         const API_KEY = 'Zi3jWkYRWx1wIQ8VEaOXh4piarIpjwXj3utuH7Ct';
         const CORS_PROXY = 'https://corsproxy.io/?';
-
-        const HASHED_PASSWORD = 'b3a74966601f70f612543950a7190f7f189c441c2c8f8e79b90c102a0a202d6b';
-        const SALT = 'e_stockx_app_salt_2024';
+        const HASHED_PASSWORD = '86cb35a822329fe1de40eb82a1791be1f66f8bd327446686bdd859a89e436853';
 
         let currentProductId = null;
 
@@ -148,7 +156,6 @@
         const stepThree = document.getElementById('step-three');
         const productSearchSection = document.getElementById('product-search-section');
 
-        // Function to hash a string using SHA-256
         async function hashPassword(password) {
             const encoder = new TextEncoder();
             const data = encoder.encode(password);
@@ -467,11 +474,10 @@
         window.onload = checkAuth;
 
         document.getElementById('login-button').addEventListener('click', async () => {
-            // Trim the password input to remove any leading/trailing whitespace
             const passwordInput = document.getElementById('password-input').value.trim();
             const validationMessage = document.getElementById('validation-message');
             
-            const hashedAttempt = await hashPassword(passwordInput + SALT);
+            const hashedAttempt = await hashPassword(passwordInput);
 
             if (hashedAttempt === HASHED_PASSWORD) {
                 localStorage.setItem('authorized_session', 'true');
@@ -481,7 +487,6 @@
                 validationMessage.classList.remove('hidden');
             }
         });
-
     </script>
 </body>
 </html>
