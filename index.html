@@ -130,10 +130,10 @@
 
         document.getElementById('refresh-token-button').addEventListener('click', () => {
             const refreshToken = document.getElementById('refresh-token-display').value;
-            if (refreshToken) {
+            if (refreshToken && refreshToken !== 'Token not found.') {
                 refreshAccessToken(refreshToken);
             } else {
-                statusMessage.textContent = 'No refresh token available. Please get an access token first.';
+                statusMessage.textContent = 'No valid refresh token available. Please get a new access token first.';
             }
         });
         
@@ -159,9 +159,16 @@
                 
                 if (response.ok) {
                     document.getElementById('access-token-display').value = data.access_token || 'Token not found.';
-                    document.getElementById('refresh-token-display').value = data.refresh_token || 'Token not found.';
+                    
+                    if (data.refresh_token) {
+                         document.getElementById('refresh-token-display').value = data.refresh_token;
+                         statusMessage.textContent = 'Successfully received tokens!';
+                    } else {
+                         document.getElementById('refresh-token-display').value = 'Token not found.';
+                         statusMessage.textContent = 'Successfully received access token, but refresh token was not provided by the API. Please ensure your application is configured with the "offline_access" scope.';
+                    }
+                    
                     document.getElementById('token-display').classList.remove('hidden');
-                    statusMessage.textContent = 'Successfully received tokens!';
                 } else {
                     statusMessage.textContent = `Error: ${data.error_description || data.error}`;
                 }
@@ -193,8 +200,13 @@
                 if (response.ok) {
                     document.getElementById('access-token-display').value = data.access_token || 'Token not found.';
                     // The API should return a new refresh token. Update it for security.
-                    document.getElementById('refresh-token-display').value = data.refresh_token || 'Token not found.';
-                    statusMessage.textContent = 'Successfully refreshed tokens!';
+                    if (data.refresh_token) {
+                        document.getElementById('refresh-token-display').value = data.refresh_token;
+                        statusMessage.textContent = 'Successfully refreshed tokens!';
+                    } else {
+                        document.getElementById('refresh-token-display').value = 'Token not found.';
+                        statusMessage.textContent = 'Successfully received a new access token, but a new refresh token was not provided. The old one may still be valid.';
+                    }
                 } else {
                     statusMessage.textContent = `Error: ${data.error_description || data.error}`;
                 }
