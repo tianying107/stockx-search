@@ -176,6 +176,10 @@
         });
         
         document.getElementById('search-button').addEventListener('click', searchProduct);
+        document.getElementById('product-select').addEventListener('change', () => {
+            document.getElementById('variant-section').classList.add('hidden');
+            document.getElementById('bid-result-display').classList.add('hidden');
+        });
         document.getElementById('select-product-button').addEventListener('click', () => {
             const selectedProductUUID = document.getElementById('product-select').value;
             currentProductId = selectedProductUUID;
@@ -262,13 +266,13 @@
                 const data = await response.json();
                 console.log('Search response:', data);
 
-                if (response.ok && data.results && data.results.length > 0) {
+                if (response.ok && data.products && data.products.length > 0) {
                     const productSelect = document.getElementById('product-select');
                     productSelect.innerHTML = '';
-                    data.results.forEach(product => {
+                    data.products.forEach(product => {
                         const option = document.createElement('option');
-                        option.value = product.uuid;
-                        option.textContent = `${product.shoe} - ${product.style_id}`;
+                        option.value = product.productId;
+                        option.textContent = `${product.title} (${product.styleId})`;
                         productSelect.appendChild(option);
                     });
                     document.getElementById('product-list-section').classList.remove('hidden');
@@ -316,8 +320,8 @@
                     selectElement.innerHTML = '';
                     data.results.forEach(variant => {
                         const option = document.createElement('option');
-                        option.value = variant.uuid;
-                        option.textContent = variant.size;
+                        option.value = variant.variantId;
+                        option.textContent = variant.variantValue;
                         selectElement.appendChild(option);
                     });
                     document.getElementById('variant-section').classList.remove('hidden');
@@ -370,9 +374,9 @@
                 const data = await response.json();
                 console.log('Market data response:', data);
 
-                if (response.ok && data.results && data.results.market && data.results.market.highest_bid) {
-                    document.getElementById('highest-bid-text').textContent = `$${data.results.market.highest_bid}`;
-                    document.getElementById('bid-info').textContent = `Currency: ${data.results.market.currency}`;
+                if (response.ok && data.highestBidAmount) {
+                    document.getElementById('highest-bid-text').textContent = `$${data.highestBidAmount}`;
+                    document.getElementById('bid-info').textContent = `Currency: ${data.currencyCode}`;
                     document.getElementById('bid-result-display').classList.remove('hidden');
                     statusMessage.textContent = 'Highest bid retrieved successfully!';
                 } else {
