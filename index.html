@@ -36,11 +36,14 @@
         <div id="step-two" class="hidden mb-6">
             <h2 class="text-xl font-semibold text-gray-700 mb-2">Step 2: Your Authorization Code</h2>
             <p class="text-sm text-gray-500 mb-4">
-                Copy the code below. You can now use it to get an access token.
+                The code below was retrieved from the URL. Copy it or click 'Use Code' to proceed to the next step.
             </p>
             <textarea id="code-display" readonly class="w-full h-24 p-3 font-mono text-sm bg-gray-50 rounded-lg border border-gray-300 resize-none overflow-auto shadow-inner"></textarea>
             <button id="copy-code-button" class="bg-green-500 text-white font-medium py-2 px-4 rounded-xl shadow-lg mt-4 hover:bg-green-600 transition duration-300">
                 Copy Code
+            </button>
+            <button id="use-code-button" class="bg-indigo-600 text-white font-medium py-2 px-4 rounded-xl shadow-lg mt-4 hover:bg-indigo-700 transition duration-300 ml-4">
+                Use Code
             </button>
             <p id="copy-code-message" class="text-xs text-green-600 mt-2 opacity-0 transition-opacity duration-300">Copied!</p>
         </div>
@@ -110,6 +113,11 @@
             }, 2000);
         });
 
+        document.getElementById('use-code-button').addEventListener('click', () => {
+            stepThree.classList.remove('hidden');
+            statusMessage.textContent = 'Authorization code ready. Click "Get Access Token" to proceed.';
+        });
+
         document.getElementById('copy-access-token-button').addEventListener('click', () => {
             const tokenDisplay = document.getElementById('access-token-display');
             tokenDisplay.select();
@@ -123,9 +131,12 @@
         });
 
         document.getElementById('get-token-button').addEventListener('click', () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const authCode = urlParams.get('code');
-            exchangeCodeForToken(authCode);
+            const authCode = document.getElementById('code-display').value;
+            if (authCode && authCode !== 'Token not found.') {
+                exchangeCodeForToken(authCode);
+            } else {
+                statusMessage.textContent = 'Please provide a valid authorization code first.';
+            }
         });
 
         document.getElementById('refresh-token-button').addEventListener('click', () => {
@@ -223,9 +234,8 @@
             if (authCode) {
                 stepOne.classList.add('hidden');
                 stepTwo.classList.remove('hidden');
-                stepThree.classList.remove('hidden');
                 document.getElementById('code-display').value = authCode;
-                statusMessage.textContent = 'Authorization code received. You can now get your access token.';
+                statusMessage.textContent = 'Authorization code received. Copy the code or click "Use Code" to proceed.';
             } else if (window.location.search) {
                 statusMessage.textContent = 'Something went wrong. Please try again.';
             } else {
