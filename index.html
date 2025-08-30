@@ -110,6 +110,25 @@
                         Select Product
                     </button>
                 </div>
+
+                <!-- Financial Inputs -->
+                <div id="financial-inputs-section" class="hidden mt-6 text-left bg-gray-100 p-4 rounded-lg">
+                    <h3 class="text-lg font-semibold text-gray-700 mb-3">Financial Inputs</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                            <label for="original-price-input" class="block text-gray-700 text-sm mb-1">Original Price ($)</label>
+                            <input type="number" id="original-price-input" class="w-full p-2 border border-gray-300 rounded-lg" value="0">
+                        </div>
+                        <div>
+                            <label for="discount-rate-input" class="block text-gray-700 text-sm mb-1">Discount Rate (%)</label>
+                            <input type="number" id="discount-rate-input" class="w-full p-2 border border-gray-300 rounded-lg" value="0">
+                        </div>
+                        <div>
+                            <label for="tax-rate-input" class="block text-gray-700 text-sm mb-1">Tax Rate (%)</label>
+                            <input type="number" id="tax-rate-input" class="w-full p-2 border border-gray-300 rounded-lg" value="0">
+                        </div>
+                    </div>
+                </div>
                 
                 <!-- Variants Table Section -->
                 <div id="variants-table-section" class="hidden mt-6 text-left">
@@ -119,7 +138,10 @@
                             <thead class="bg-gray-200">
                                 <tr>
                                     <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider rounded-tl-lg">Variant</th>
-                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider rounded-tr-lg">Highest Bid</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Highest Bid</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Earned</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Cost</th>
+                                    <th class="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider rounded-tr-lg">Make Profile?</th>
                                 </tr>
                             </thead>
                             <tbody id="bids-table-body" class="bg-white divide-y divide-gray-200">
@@ -223,6 +245,7 @@
         });
         document.getElementById('back-to-search-button').addEventListener('click', () => {
             document.getElementById('product-list-section').classList.remove('hidden');
+            document.getElementById('financial-inputs-section').classList.add('hidden');
             document.getElementById('variants-table-section').classList.add('hidden');
             document.getElementById('back-to-search-button').classList.add('hidden');
             statusMessage.textContent = 'Select a new product to view its bids.';
@@ -314,12 +337,14 @@
                         productSelect.appendChild(option);
                     });
                     document.getElementById('product-list-section').classList.remove('hidden');
+                    document.getElementById('financial-inputs-section').classList.remove('hidden');
                     document.getElementById('variants-table-section').classList.add('hidden');
                     document.getElementById('back-to-search-button').classList.add('hidden');
                     statusMessage.textContent = 'Products found. Please select one to continue.';
                 } else {
                     statusMessage.textContent = 'No products found for that query.';
                     document.getElementById('product-list-section').classList.add('hidden');
+                    document.getElementById('financial-inputs-section').classList.add('hidden');
                     document.getElementById('variants-table-section').classList.add('hidden');
                     document.getElementById('back-to-search-button').classList.add('hidden');
                 }
@@ -334,6 +359,10 @@
             document.getElementById('variants-table-section').classList.add('hidden');
             document.getElementById('back-to-search-button').classList.add('hidden');
             document.getElementById('product-list-section').classList.add('hidden');
+
+            const taxRate = parseFloat(document.getElementById('tax-rate-input').value) / 100;
+            const discountRate = parseFloat(document.getElementById('discount-rate-input').value) / 100;
+            const originalPrice = parseFloat(document.getElementById('original-price-input').value);
 
             try {
                 const variantsUrl = `${CORS_PROXY}https://api.stockx.com/v2/catalog/products/${productId}/variants`;
@@ -371,7 +400,7 @@
                         }
                     }).then(response => response.json())
                       .then(marketData => {
-                          if (marketData.highestBidAmount && marketData.highestBidAmount > 0) {
+                          if (marketData.highestBidAmount) {
                             return {
                                 variantName: variant.variantValue,
                                 highestBid: marketData.highestBidAmount,
@@ -395,10 +424,26 @@
                 if (allBids.length === 0) {
                     statusMessage.textContent = 'No highest bids found for any variant of this product.';
                     document.getElementById('product-list-section').classList.remove('hidden');
+                    document.getElementById('financial-inputs-section').classList.remove('hidden');
                     return;
                 }
 
-                allBids.forEach((bid, index) => {
+                // Process bids with financial calculations
+                const processedBids = allBids.map(bid => {
+                    const highestBid = parseFloat(bid.highestBid);
+                    const earned = Math.min(highestBid * 0.89, highestBid - 5) - 4;
+                    const cost = originalPrice * (1 - discountRate) * (1 + taxRate);
+                    const makeProfileFlag = earned > cost;
+                    return {
+                        ...bid,
+                        earned: earned,
+                        cost: cost,
+                        makeProfileFlag: makeProfileFlag
+                    };
+                });
+
+
+                processedBids.forEach((bid, index) => {
                     const row = document.createElement('tr');
                     const isHighest = index === 0;
                     row.classList.add('hover:bg-gray-50');
@@ -410,12 +455,28 @@
                     variantCell.classList.add('px-6', 'py-4', 'whitespace-nowrap');
                     variantCell.textContent = bid.variantName;
 
-                    const bidCell = document.createElement('td');
-                    bidCell.classList.add('px-6', 'py-4', 'whitespace-nowrap');
-                    bidCell.textContent = `$${bid.highestBid} ${bid.currency}`;
+                    const highestBidCell = document.createElement('td');
+                    highestBidCell.classList.add('px-6', 'py-4', 'whitespace-nowrap');
+                    highestBidCell.textContent = `$${bid.highestBid} ${bid.currency}`;
+
+                    const earnedCell = document.createElement('td');
+                    earnedCell.classList.add('px-6', 'py-4', 'whitespace-nowrap');
+                    earnedCell.textContent = `$${bid.earned.toFixed(2)}`;
+                    
+                    const costCell = document.createElement('td');
+                    costCell.classList.add('px-6', 'py-4', 'whitespace-nowrap');
+                    costCell.textContent = `$${bid.cost.toFixed(2)}`;
+
+                    const profileFlagCell = document.createElement('td');
+                    profileFlagCell.classList.add('px-6', 'py-4', 'whitespace-nowrap', 'text-center');
+                    profileFlagCell.textContent = bid.makeProfileFlag ? '✔' : '✖';
+                    profileFlagCell.classList.add(bid.makeProfileFlag ? 'text-green-600' : 'text-red-600', 'font-bold', 'text-lg');
 
                     row.appendChild(variantCell);
-                    row.appendChild(bidCell);
+                    row.appendChild(highestBidCell);
+                    row.appendChild(earnedCell);
+                    row.appendChild(costCell);
+                    row.appendChild(profileFlagCell);
                     tableBody.appendChild(row);
                 });
 
