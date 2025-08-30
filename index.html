@@ -109,6 +109,8 @@
         const REDIRECT_URI = window.location.origin + window.location.pathname;
         const CLIENT_SECRET = '5pCGn0XR2xCa4K6shFZqW1M0n6peSSi5ztMzpL20_pK7AMXghNjUcaMvQegW0rZv';
         const API_KEY = 'Zi3jWkYRWx1wIQ8VEaOXh4piarIpjwXj3utuH7Ct';
+        // CORS Proxy to bypass browser security policies
+        const CORS_PROXY = 'https://corsproxy.io/?';
         let currentProductId = null;
 
         const statusMessage = document.getElementById('status-message');
@@ -187,14 +189,17 @@
                 console.log('Token exchange response:', data);
                 
                 if (response.ok) {
-                    document.getElementById('access-token-display').value = data.access_token || 'Token not found.';
+                    const accessToken = data.access_token || 'Token not found.';
+                    // Save the access token to localStorage for persistence
+                    localStorage.setItem('stockx_access_token', accessToken);
+                    
+                    document.getElementById('access-token-display').value = accessToken;
                     
                     statusMessage.textContent = 'Successfully received an access token! You can now proceed to Step 4.';
                     
                     document.getElementById('token-display').classList.remove('hidden');
-                    document.getElementById('proceed-to-step-4-button').classList.remove('bg-gray-400');
+                    document.getElementById('proceed-to-step-4-button').classList.remove('bg-gray-400', 'cursor-not-allowed');
                     document.getElementById('proceed-to-step-4-button').classList.add('bg-indigo-600');
-                    document.getElementById('proceed-to-step-4-button').classList.remove('cursor-not-allowed');
                 } else {
                     statusMessage.textContent = `Error: ${data.error_description || data.error}`;
                 }
@@ -220,7 +225,8 @@
 
             statusMessage.textContent = 'Searching for product...';
             try {
-                const url = `https://api.stockx.com/v2/catalog/search?query=${encodeURIComponent(query)}`;
+                // Use a CORS proxy to prevent cross-origin errors
+                const url = `${CORS_PROXY}https://api.stockx.com/v2/catalog/search?query=${encodeURIComponent(query)}`;
                 const response = await fetch(url, {
                     method: 'GET',
                     headers: {
@@ -229,6 +235,15 @@
                         'Content-Type': 'application/json'
                     }
                 });
+
+                if (response.status === 401) {
+                    // Token is invalid or expired
+                    localStorage.removeItem('stockx_access_token');
+                    statusMessage.textContent = 'Session expired. Please click "Authorize with StockX" to get a new token.';
+                    resetUI();
+                    return;
+                }
+
                 const data = await response.json();
                 console.log('Search response:', data);
 
@@ -249,7 +264,8 @@
         async function getVariants(accessToken, productId) {
             statusMessage.textContent = 'Retrieving product variants...';
             try {
-                const url = `https://api.stockx.com/v2/catalog/products/${productId}/variants`;
+                // Use a CORS proxy to prevent cross-origin errors
+                const url = `${CORS_PROXY}https://api.stockx.com/v2/catalog/products/${productId}/variants`;
                 const response = await fetch(url, {
                     method: 'GET',
                     headers: {
@@ -258,6 +274,14 @@
                         'Content-Type': 'application/json'
                     }
                 });
+
+                if (response.status === 401) {
+                    localStorage.removeItem('stockx_access_token');
+                    statusMessage.textContent = 'Session expired. Please click "Authorize with StockX" to get a new token.';
+                    resetUI();
+                    return;
+                }
+
                 const data = await response.json();
                 console.log('Variants response:', data);
                 
@@ -299,7 +323,8 @@
 
             statusMessage.textContent = 'Getting highest bid...';
             try {
-                const url = `https://api.stockx.com/v2/catalog/products/${currentProductId}/variants/${variantId}/market-data`;
+                // Use a CORS proxy to prevent cross-origin errors
+                const url = `${CORS_PROXY}https://api.stockx.com/v2/catalog/products/${currentProductId}/variants/${variantId}/market-data`;
                 const response = await fetch(url, {
                     method: 'GET',
                     headers: {
@@ -308,6 +333,14 @@
                         'Content-Type': 'application/json'
                     }
                 });
+
+                if (response.status === 401) {
+                    localStorage.removeItem('stockx_access_token');
+                    statusMessage.textContent = 'Session expired. Please click "Authorize with StockX" to get a new token.';
+                    resetUI();
+                    return;
+                }
+
                 const data = await response.json();
                 console.log('Market data response:', data);
 
@@ -325,19 +358,36 @@
                 console.error('Bid error:', error);
             }
         }
+        
+        function resetUI() {
+            stepOne.classList.remove('hidden');
+            stepTwo.classList.add('hidden');
+            stepThree.classList.add('hidden');
+            productSearchSection.classList.add('hidden');
+            document.getElementById('access-token-display').value = '';
+        }
 
         window.onload = function() {
             const urlParams = new URLSearchParams(window.location.search);
             const authCode = urlParams.get('code');
+            const storedToken = localStorage.getItem('stockx_access_token');
 
             if (authCode) {
+                // If a new authorization code is found, show Step 2
                 stepOne.classList.add('hidden');
                 stepTwo.classList.remove('hidden');
                 document.getElementById('code-display').value = authCode;
                 statusMessage.textContent = 'Authorization code received. Copy the code or click "Use Code" to proceed.';
-            } else if (window.location.search) {
-                statusMessage.textContent = 'Something went wrong. Please try again.';
+            } else if (storedToken) {
+                // If no new code, but a token is stored, go straight to Step 4
+                stepOne.classList.add('hidden');
+                stepTwo.classList.add('hidden');
+                stepThree.classList.add('hidden');
+                productSearchSection.classList.remove('hidden');
+                document.getElementById('access-token-display').value = storedToken;
+                statusMessage.textContent = 'Welcome back! Your previous session was restored. You can now search for products.';
             } else {
+                // Otherwise, show the initial state
                 statusMessage.textContent = 'Click the button to begin.';
             }
         };
