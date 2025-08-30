@@ -20,17 +20,6 @@
         <p class="text-gray-600 mb-6">
             Follow the steps below to get your authorization code and then your access token. This tool does not store your credentials.
         </p>
-
-        <!-- Display the correct Redirect URI for the user to copy -->
-        <div class="mb-6 bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-xl">
-            <h3 class="text-lg font-bold text-yellow-700 mb-2">Important: One-Time Setup</h3>
-            <p class="text-sm text-yellow-600 mb-2">
-                Copy the URL below and add it to the "Redirect URIs" in your StockX Developer Portal.
-            </p>
-            <div class="bg-yellow-100 p-3 rounded-lg border border-yellow-300 break-all font-mono text-sm text-yellow-800">
-                <span id="display-uri"></span>
-            </div>
-        </div>
         
         <!-- Step 1: Link to StockX -->
         <div id="step-one" class="mb-6">
@@ -60,10 +49,13 @@
         <div id="step-three" class="hidden mb-6">
             <h2 class="text-xl font-semibold text-gray-700 mb-2">Step 3: Get Access Token</h2>
             <p class="text-sm text-gray-500 mb-4">
-                Click the button below to exchange the authorization code for an access token.
+                Click the button below to exchange the authorization code for an access token or to refresh it.
             </p>
             <button id="get-token-button" class="bg-blue-600 text-white font-medium py-3 px-6 rounded-xl shadow-lg hover:bg-blue-700 transition duration-300 transform hover:scale-105">
                 Get Access Token
+            </button>
+            <button id="refresh-token-button" class="bg-purple-600 text-white font-medium py-3 px-6 rounded-xl shadow-lg hover:bg-purple-700 transition duration-300 transform hover:scale-105 ml-4">
+                Refresh Access Token
             </button>
             <div id="token-display" class="hidden mt-6 text-left">
                 <div class="mb-4">
@@ -92,7 +84,6 @@
         const REDIRECT_URI = window.location.origin + window.location.pathname;
         const CLIENT_SECRET = '5pCGn0XR2xCa4K6shFZqW1M0n6peSSi5ztMzpL20_pK7AMXghNjUcaMvQegW0rZv';
 
-        document.getElementById('display-uri').textContent = REDIRECT_URI;
         const statusMessage = document.getElementById('status-message');
         const stepOne = document.getElementById('step-one');
         const stepTwo = document.getElementById('step-two');
@@ -136,6 +127,15 @@
             const authCode = urlParams.get('code');
             exchangeCodeForToken(authCode);
         });
+
+        document.getElementById('refresh-token-button').addEventListener('click', () => {
+            const refreshToken = document.getElementById('refresh-token-display').value;
+            if (refreshToken) {
+                refreshAccessToken(refreshToken);
+            } else {
+                statusMessage.textContent = 'No refresh token available. Please get an access token first.';
+            }
+        });
         
         async function exchangeCodeForToken(authCode) {
             statusMessage.textContent = 'Exchanging code for token...';
@@ -155,10 +155,11 @@
                 });
 
                 const data = await response.json();
+                console.log('Token exchange response:', data);
                 
                 if (response.ok) {
-                    document.getElementById('access-token-display').value = data.access_token;
-                    document.getElementById('refresh-token-display').value = data.refresh_token;
+                    document.getElementById('access-token-display').value = data.access_token || 'Token not found.';
+                    document.getElementById('refresh-token-display').value = data.refresh_token || 'Token not found.';
                     document.getElementById('token-display').classList.remove('hidden');
                     statusMessage.textContent = 'Successfully received tokens!';
                 } else {
@@ -167,6 +168,39 @@
             } catch (error) {
                 statusMessage.textContent = `An error occurred: ${error.message}`;
                 console.error('Error fetching token:', error);
+            }
+        }
+
+        async function refreshAccessToken(refreshToken) {
+            statusMessage.textContent = 'Refreshing access token...';
+            try {
+                const response = await fetch('https://accounts.stockx.com/oauth/token', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: new URLSearchParams({
+                        grant_type: 'refresh_token',
+                        client_id: CLIENT_ID,
+                        client_secret: CLIENT_SECRET,
+                        refresh_token: refreshToken
+                    })
+                });
+
+                const data = await response.json();
+                console.log('Token refresh response:', data);
+
+                if (response.ok) {
+                    document.getElementById('access-token-display').value = data.access_token || 'Token not found.';
+                    // The API should return a new refresh token. Update it for security.
+                    document.getElementById('refresh-token-display').value = data.refresh_token || 'Token not found.';
+                    statusMessage.textContent = 'Successfully refreshed tokens!';
+                } else {
+                    statusMessage.textContent = `Error: ${data.error_description || data.error}`;
+                }
+            } catch (error) {
+                statusMessage.textContent = `An error occurred: ${error.message}`;
+                console.error('Error refreshing token:', error);
             }
         }
 
