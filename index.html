@@ -11,6 +11,27 @@
             font-family: 'Inter', sans-serif;
             background-color: #f3f4f6;
         }
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-container {
+            background-color: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+        }
     </style>
 </head>
 <body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
@@ -169,6 +190,24 @@
         </div>
     </div>
 
+    <!-- Confirmation Modal -->
+    <div id="adidas-modal-overlay" class="modal-overlay hidden">
+        <div class="modal-container">
+            <h2 class="text-xl font-bold mb-4">Leave App?</h2>
+            <p class="text-gray-600 mb-6">
+                You're about to open the Adidas search page in a new tab.
+            </p>
+            <div class="flex justify-center space-x-4">
+                <button id="cancel-adidas-button" class="bg-gray-400 text-white font-medium py-2 px-4 rounded-xl shadow-lg hover:bg-gray-500 transition duration-300">
+                    Cancel
+                </button>
+                <button id="proceed-adidas-button" class="bg-indigo-600 text-white font-medium py-2 px-4 rounded-xl shadow-lg hover:bg-indigo-700 transition duration-300">
+                    Proceed
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const CLIENT_ID = 'bIQrwMpNVs2dj2N5QmCx1TUJm8GdgnzL';
         const REDIRECT_URI = window.location.origin + window.location.pathname;
@@ -185,6 +224,7 @@
         const stepTwo = document.getElementById('step-two');
         const stepThree = document.getElementById('step-three');
         const productSearchSection = document.getElementById('product-search-section');
+        const adidasModalOverlay = document.getElementById('adidas-modal-overlay');
 
         async function hashPassword(password) {
             const encoder = new TextEncoder();
@@ -242,13 +282,25 @@
         });
         
         document.getElementById('search-button').addEventListener('click', searchProduct);
+
+        // New logic for the Adidas button
         document.getElementById('search-adidas-button').addEventListener('click', () => {
             const query = document.getElementById('product-query').value.trim();
             if (query) {
-                window.open(`https://www.adidas.com/us/search?q=${encodeURIComponent(query)}`, '_blank');
+                adidasModalOverlay.classList.remove('hidden');
             } else {
                 statusMessage.textContent = 'Please enter a product or style ID to search Adidas.';
             }
+        });
+
+        document.getElementById('cancel-adidas-button').addEventListener('click', () => {
+            adidasModalOverlay.classList.add('hidden');
+        });
+
+        document.getElementById('proceed-adidas-button').addEventListener('click', () => {
+            const query = document.getElementById('product-query').value.trim();
+            window.open(`https://www.adidas.com/us/search?q=${encodeURIComponent(query)}`, '_blank');
+            adidasModalOverlay.classList.add('hidden');
         });
 
         document.getElementById('product-select').addEventListener('change', () => {
@@ -538,8 +590,7 @@
                 earnedCell.classList.add('px-6', 'py-4', 'whitespace-nowrap');
                 earnedCell.textContent = `$${bid.earned.toFixed(2)}`;
                 
-                const costCell = document.createElement('td');
-                costCell.classList.add('px-6', 'py-4', 'whitespace-nowrap');
+                const costCell = document.classList.add('px-6', 'py-4', 'whitespace-nowrap');
                 costCell.textContent = `$${bid.cost.toFixed(2)}`;
 
                 const profileFlagCell = document.createElement('td');
